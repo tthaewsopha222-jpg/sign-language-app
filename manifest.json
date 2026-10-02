@@ -1,0 +1,11 @@
+{
+  "name": "ระบบแปลภาษามือเป็นเสียง",
+  "short_name": "แปลภาษามือ",
+  "description": "ระบบแปลภาษามือเป็นคำภาษาไทยและอ่านออกเสียง",
+  "start_url": "/sign-language-app/",
+  "scope": "/sign-language-app/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": []
+}
