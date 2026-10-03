@@ -414,7 +414,12 @@
       alert("อ่านออกเสียงไม่สำเร็จ: " + event.error);
     };
 
-    synth.cancel();
+    synth.cancel(); 
+
+speech.onstart = function () {
+  alert("เริ่มอ่านออกเสียงแล้ว");
+};
+    
     synth.speak(speech);
   }
 
