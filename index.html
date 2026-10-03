@@ -380,21 +380,46 @@
 
 
   // อ่านออกเสียงภาษาไทย
+// อ่านออกเสียงภาษาไทย
   function speakResult() {
+    if (!lastResult) {
+      alert("ยังไม่มีข้อความให้อ่านออกเสียง");
+      return;
+    }
 
-    if (!lastResult) return;
+    if (
+      !("speechSynthesis" in window) ||
+      !("SpeechSynthesisUtterance" in window)
+    ) {
+      alert("เบราว์เซอร์ไม่รองรับการอ่านออกเสียง");
+      return;
+    }
 
+    const synth = window.speechSynthesis;
     const speech = new SpeechSynthesisUtterance(lastResult);
 
     speech.lang = "th-TH";
     speech.rate = 0.9;
 
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(speech);
+    const voices = synth.getVoices();
+    const thaiVoice = voices.find(
+      voice => voice.lang.toLowerCase().startsWith("th")
+    );
+
+    if (thaiVoice) {
+      speech.voice = thaiVoice;
+    }
+
+    speech.onerror = function (event) {
+      alert("อ่านออกเสียงไม่สำเร็จ: " + event.error);
+    };
+
+    synth.cancel();
+    synth.speak(speech);
   }
 
 
-  // เริ่มใหม่
+   // เริ่มใหม่
   function resetApp() {
 
     if (webcamStream) {
@@ -405,6 +430,7 @@
 
       webcamStream = null;
     }
+
 
     selectedWord = "";
     lastResult = "";
