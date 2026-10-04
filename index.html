@@ -162,24 +162,44 @@
       }
     }
 
-    function speakResult() {
-      if (!lastResult) {
-        $("status").textContent = "ยังไม่มีข้อความให้อ่านออกเสียง";
-        return;
-      }
 
-      if (!("speechSynthesis" in window)) {
-        $("status").textContent = "เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง";
-        return;
-      }
+function speakResult() {
+  const text = String(lastResult || "").trim();
 
-      const utterance = new SpeechSynthesisUtterance(lastResult);
-      utterance.lang = "th-TH";
-      utterance.rate = 0.9;
+  if (!text) {
+    $("status").textContent = "ยังไม่มีข้อความให้อ่านออกเสียง";
+    return;
+  }
 
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-    }
+  if (!("speechSynthesis" in window)) {
+    $("status").textContent = "เบราว์เซอร์ไม่รองรับการอ่านออกเสียง";
+    return;
+  }
+
+  const synth = window.speechSynthesis;
+  synth.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "th-TH";
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  utterance.onstart = function () {
+    $("status").textContent = "กำลังอ่านออกเสียง: " + text;
+  };
+
+  utterance.onend = function () {
+    $("status").textContent = "อ่านออกเสียงเสร็จแล้ว";
+  };
+
+  utterance.onerror = function (event) {
+    $("status").textContent =
+      "อ่านออกเสียงไม่สำเร็จ: " + event.error;
+  };
+
+  synth.speak(utterance);
+}
 
     function stopCamera() {
       running = false;
