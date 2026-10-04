@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3157a4">
   <title>ระบบแปลภาษามือเป็นเสียง</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -11,168 +12,248 @@
 
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       padding: 20px;
       font-family: sans-serif;
-      background: #f2f6ff;
-      color: #24324a;
-      text-align: center;
+      background: #f0f4ff;
+      color: #253452;
     }
-    .screen { display: none; max-width: 600px; margin: auto; }
+
+    main {
+      max-width: 540px;
+      margin: auto;
+    }
+
+    .screen { display: none; }
     .screen.active { display: block; }
-    h1 { color: #3159a6; }
-    button {
-      border: 0;
-      border-radius: 12px;
-      padding: 14px 20px;
-      margin: 8px;
-      font-size: 17px;
-      background: #3867d6;
-      color: white;
-      cursor: pointer;
-    }
-    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    h1 { color: #3157a4; }
+    .center { text-align: center; }
+
     .panel {
       background: white;
-      padding: 18px;
+      border-radius: 18px;
+      padding: 20px;
       margin: 16px 0;
-      border-radius: 16px;
-      box-shadow: 0 3px 12px #00000012;
+      box-shadow: 0 4px 16px #172b4d12;
     }
-    video {
+
+    button {
+      display: block;
       width: 100%;
-      max-width: 420px;
+      border: 0;
       border-radius: 12px;
-      background: #222;
+      padding: 15px;
+      margin: 10px 0;
+      background: #3157a4;
+      color: white;
+      font-size: 17px;
+      cursor: pointer;
     }
-    #result { font-size: 28px; font-weight: bold; color: #2457b5; }
-    #status { white-space: pre-wrap; line-height: 1.6; }
+
+    button.secondary { background: #64748b; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    video {
+      display: block;
+      width: 100%;
+      background: #111827;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+
+    #result {
+      font-size: 30px;
+      font-weight: bold;
+      color: #3157a4;
+      overflow-wrap: anywhere;
+    }
+
+    #status {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .small { font-size: 14px; color: #64748b; }
   </style>
 </head>
 
 <body>
-  <section id="home" class="screen active">
-    <h1>ระบบแปลภาษามือเป็นเสียง</h1>
-    <p>แปลท่ามือเป็นข้อความภาษาไทย</p>
-    <button onclick="showScreen('select')">แปลภาษามือ</button>
+<main>
+  <section id="home" class="screen active center">
+    <div class="panel">
+      <h1>ระบบแปลภาษามือเป็นเสียง</h1>
+      <p>เปลี่ยนท่ามือเป็นข้อความภาษาไทย</p>
+      <button onclick="showScreen('translate')">
+        แปลภาษามือ
+      </button>
+    </div>
   </section>
 
-  <section id="select" class="screen">
-    <h1>เริ่มแปลภาษามือ</h1>
+  <section id="translate" class="screen">
+    <h1 class="center">แปลภาษามือ</h1>
+
     <div class="panel">
-      <p>ใช้กล้องโทรศัพท์เพื่อแสดงท่ามือหน้ากล้อง</p>
-      <button id="startButton" onclick="startCamera()">เปิดกล้องและเริ่มแปล</button>
-      <button onclick="showScreen('home')">กลับหน้าหลัก</button>
-    </div>
-    <div class="panel">
+      <p id="status">กดปุ่มเพื่อเริ่มต้น</p>
+
+      <button id="startButton" onclick="startCamera()">
+        เปิดกล้องและเริ่มแปล
+      </button>
+
       <video id="camera" autoplay playsinline muted></video>
-      <p id="status">กดเปิดกล้องเพื่อเริ่มต้น</p>
-      <p>ผลการแปล</p>
-      <div id="result">ยังไม่พบท่ามือ</div>
-      <button id="speakButton" onclick="speakResult()" disabled>🔊 อ่านออกเสียง</button>
-      <button id="stopButton" onclick="stopCamera()">ปิดกล้อง</button>
+
+      <p class="center">ผลการแปล</p>
+      <div id="result" class="center">รอท่ามือ...</div>
+
+      <button id="speakButton" onclick="speakResult()" disabled>
+        🔊 อ่านออกเสียง
+      </button>
+
+      <button class="secondary" onclick="stopCamera()">
+        ปิดกล้อง
+      </button>
+
+      <button class="secondary" onclick="goHome()">
+        กลับหน้าหลัก
+      </button>
+
+      <p class="small">
+        หมายเหตุ: ความแม่นยำขึ้นอยู่กับท่ามือและข้อมูลที่ใช้ฝึกโมเดล
+      </p>
     </div>
   </section>
+</main>
 
-  <script>
-    const MODEL_URL =
-      "https://teachablemachine.withgoogle.com/models/uYzdWo2E3/";
+<script>
+"use strict";
 
-    let model = null;
-    let stream = null;
-    let running = false;
-    let lastResult = "";
-    let lastSpoken = "";
-    let lastSpokenAt = 0;
-    let predictionBusy = false;
+const MODEL_URL =
+  "https://teachablemachine.withgoogle.com/models/uYzdWo2E3/";
 
-    const $ = id => document.getElementById(id);
+let model = null;
+let cameraStream = null;
+let cameraRunning = false;
+let lastResult = "";
+let predictionBusy = false;
+let predictionTimer = null;
 
-    function showScreen(name) {
-      document.querySelectorAll(".screen").forEach(screen => {
-        screen.classList.remove("active");
-      });
-      $(name).classList.add("active");
-    }
+const $ = id => document.getElementById(id);
 
-    async function loadModel() {
-      if (model) return;
+function setStatus(message) {
+  $("status").textContent = message;
+}
 
-      $("status").textContent = "กำลังโหลดโมเดล...";
-      model = await tmImage.load(
-        MODEL_URL + "model.json",
-        MODEL_URL + "metadata.json"
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(screen => {
+    screen.classList.remove("active");
+  });
+
+  $(id).classList.add("active");
+}
+
+function goHome() {
+  stopCamera();
+  showScreen("home");
+}
+
+async function loadModel() {
+  if (model) return;
+
+  if (!window.tmImage) {
+    throw new Error("โหลดไลบรารีโมเดลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ต");
+  }
+
+  setStatus("กำลังโหลดโมเดล...");
+
+  model = await tmImage.load(
+    MODEL_URL + "model.json",
+    MODEL_URL + "metadata.json"
+  );
+
+  setStatus("โหลดโมเดลสำเร็จ");
+}
+
+async function startCamera() {
+  if (cameraRunning) return;
+
+  if (!navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia) {
+    setStatus("ไม่สามารถเปิดกล้องได้ กรุณาเปิดเว็บผ่าน HTTPS");
+    return;
+  }
+
+  $("startButton").disabled = true;
+
+  try {
+    await loadModel();
+
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
+
+    $("camera").srcObject = cameraStream;
+    await $("camera").play();
+
+    cameraRunning = true;
+    setStatus("กล้องพร้อมแล้ว กำลังตรวจจับท่ามือ...");
+    predictLoop();
+  } catch (error) {
+    stopCamera();
+    setStatus("เริ่มระบบไม่สำเร็จ: " + error.message);
+  } finally {
+    $("startButton").disabled = cameraRunning;
+  }
+}
+
+async function predictLoop() {
+  if (!cameraRunning || predictionBusy) return;
+
+  predictionBusy = true;
+
+  try {
+    const predictions = await model.predict($("camera"));
+
+    predictions.sort((a, b) => b.probability - a.probability);
+    const best = predictions[0];
+
+    if (best && best.probability >= 0.80) {
+      lastResult = best.className;
+      $("result").textContent = lastResult;
+      $("speakButton").disabled = false;
+
+      setStatus(
+        "ตรวจพบท่ามือ: " + lastResult +
+        "\nความมั่นใจ: " +
+        (best.probability * 100).toFixed(1) + "%"
       );
-      $("status").textContent = "โหลดโมเดลสำเร็จ";
+    } else {
+      setStatus("ยังไม่มั่นใจในท่ามือ ลองจัดมือให้อยู่ในภาพ");
     }
+  } catch (error) {
+    setStatus("ตรวจจับไม่สำเร็จ: " + error.message);
+  } finally {
+    predictionBusy = false;
 
-    async function startCamera() {
-      if (running) return;
-
-      $("startButton").disabled = true;
-
-      try {
-        await loadModel();
-
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
-
-        $("camera").srcObject = stream;
-        await $("camera").play();
-
-        running = true;
-        $("status").textContent = "กำลังตรวจจับท่ามือ...";
-        predictLoop();
-      } catch (error) {
-        $("status").textContent =
-          "เปิดกล้องหรือโหลดโมเดลไม่สำเร็จ\n" + error.message;
-        stopCamera();
-      }
+    if (cameraRunning) {
+      predictionTimer = setTimeout(predictLoop, 300);
     }
-
-    async function predictLoop() {
-      if (!running || predictionBusy) return;
-
-      predictionBusy = true;
-
-      try {
-        const predictions = await model.predict($("camera"));
-        predictions.sort((a, b) => b.probability - a.probability);
-
-        const best = predictions[0];
-
-        if (best && best.probability >= 0.80) {
-          lastResult = best.className;
-          $("result").textContent = lastResult;
-          $("speakButton").disabled = false;
-          $("status").textContent =
-            "ตรวจพบท่ามือ (" +
-            (best.probability * 100).toFixed(1) + "%)";
-        } else {
-          $("status").textContent = "ยังไม่มั่นใจในท่ามือ ลองปรับมือหน้ากล้อง";
-        }
-      } catch (error) {
-        $("status").textContent = "ตรวจจับไม่สำเร็จ: " + error.message;
-      } finally {
-        predictionBusy = false;
-        if (running) setTimeout(predictLoop, 250);
-      }
-    }
-
+  }
+}
 
 function speakResult() {
   const text = String(lastResult || "").trim();
 
   if (!text) {
-    $("status").textContent = "ยังไม่มีข้อความให้อ่านออกเสียง";
+    setStatus("ยังไม่มีข้อความให้อ่านออกเสียง");
     return;
   }
 
-  if (!("speechSynthesis" in window)) {
-    $("status").textContent = "เบราว์เซอร์ไม่รองรับการอ่านออกเสียง";
+  if (!("speechSynthesis" in window) ||
+      !("SpeechSynthesisUtterance" in window)) {
+    setStatus("เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง");
     return;
   }
 
@@ -185,37 +266,46 @@ function speakResult() {
   utterance.pitch = 1;
   utterance.volume = 1;
 
-  utterance.onstart = function () {
-    $("status").textContent = "กำลังอ่านออกเสียง: " + text;
+  utterance.onstart = () => {
+    setStatus("กำลังอ่านออกเสียง: " + text);
   };
 
-  utterance.onend = function () {
-    $("status").textContent = "อ่านออกเสียงเสร็จแล้ว";
+  utterance.onend = () => {
+    setStatus("อ่านออกเสียงเสร็จแล้ว");
   };
 
-  utterance.onerror = function (event) {
-    $("status").textContent =
-      "อ่านออกเสียงไม่สำเร็จ: " + event.error;
+  utterance.onerror = event => {
+    setStatus("อ่านออกเสียงไม่สำเร็จ: " + event.error);
   };
 
   synth.speak(utterance);
 }
 
-    function stopCamera() {
-      running = false;
-      predictionBusy = false;
+function stopCamera() {
+  cameraRunning = false;
 
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
+  if (predictionTimer !== null) {
+    clearTimeout(predictionTimer);
+    predictionTimer = null;
+  }
 
-      $("camera").srcObject = null;
-      $("startButton").disabled = false;
-      $("status").textContent = "ปิดกล้องแล้ว";
-    }
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
 
-    window.addEventListener("pagehide", stopCamera);
-  </script>
+  $("camera").srcObject = null;
+  $("startButton").disabled = false;
+  $("speakButton").disabled = !lastResult;
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  setStatus("ปิดกล้องแล้ว");
+}
+
+window.addEventListener("pagehide", stopCamera);
+</script>
 </body>
 </html>
