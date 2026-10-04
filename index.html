@@ -360,7 +360,7 @@
         "✅ ตรวจพบ<br><br>" +
         predictedWord;
 
-      document.getElementById("speakButton")
+      document.getElementById("")
         .disabled = false;
 
       speakResult();
@@ -444,6 +444,12 @@
 
     synth.cancel(); 
 
+speech.onstart = function () {
+  alert("เริ่มอ่านออกเสียงแล้ว");
+};
+    
+    synth.speak(speech);
+  }
 
 
    // เริ่มใหม่
@@ -489,4 +495,4 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 </body>
-</html> 
+</html>
