@@ -244,41 +244,25 @@ async function predictLoop() {
 }
 
 function speakResult() {
-  const text = String(lastResult || "").trim();
+  const text = document.getElementById("result").textContent.trim();
 
   if (!text) {
-    setStatus("ยังไม่มีข้อความให้อ่านออกเสียง");
+    alert("ยังไม่มีคำให้พูด");
     return;
   }
 
-  if (!("speechSynthesis" in window) ||
-      !("SpeechSynthesisUtterance" in window)) {
-    setStatus("เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง");
+  if (!("speechSynthesis" in window)) {
+    alert("เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง");
     return;
   }
 
-  const synth = window.speechSynthesis;
-  synth.cancel();
+  window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "th-TH";
-  utterance.rate = 0.85;
-  utterance.pitch = 1;
-  utterance.volume = 1;
+  utterance.rate = 0.9;
 
-  utterance.onstart = () => {
-    setStatus("กำลังอ่านออกเสียง: " + text);
-  };
-
-  utterance.onend = () => {
-    setStatus("อ่านออกเสียงเสร็จแล้ว");
-  };
-
-  utterance.onerror = event => {
-    setStatus("อ่านออกเสียงไม่สำเร็จ: " + event.error);
-  };
-
-  synth.speak(utterance);
+  window.speechSynthesis.speak(utterance);
 }
 
 function stopCamera() {
